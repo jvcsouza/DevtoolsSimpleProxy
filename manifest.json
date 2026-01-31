@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "DevTools Request Interceptor (MV3)",
+  "version": "1.0.0",
+  "description": "Aba no DevTools para criar regras que modificam headers via declarativeNetRequest.",
+  "permissions": ["declarativeNetRequest", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "static",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "devtools_page": "devtools.html",
+  "action": {
+    "default_title": "DevTools Request Interceptor"
+  }
+}
