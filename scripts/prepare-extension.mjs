@@ -18,13 +18,11 @@ import path from 'path';
 		fs.stat(src, (err, stats) => {
 			if (err) return;
 
-			if (stats.isFile()) fs.copyFile(src, dest, () => {});
+			if (stats.isFile()) fs.copyFileSync(src, dest);
 
 			if (!stats.isDirectory()) return;
 
-			if (fs.existsSync(dest)) fs.rm(dest, () => {});
-
-			console.log(dest);
+			if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true });
 
 			fs.mkdirSync(dest, { recursive: true });
 
