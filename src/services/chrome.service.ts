@@ -1,25 +1,21 @@
+import './chrome.mock-service';
 import { Rule, toDynamicRule } from '../types';
 
-//@ts-ignore
-const tabs = chrome.tabs;
-//@ts-ignore
-const netRequest = chrome.declarativeNetRequest;
-//@ts-ignore
-const storage = chrome.storage.local;
+// prettier-ignore
+// @ts-expect-error
+const { tabs, declarativeNetRequest: netRequest, storage: { local: storage } } = chrome;
 
 const suggestUrlFilterAsync = async () => {
 	try {
-		const tabss = await tabs.query({
+		const activeTabs = await tabs.query({
 			active: true,
 		});
 		//@ts-ignore
-		const sortedTabs = tabss.sort((x, z) => z.lastAccessed - x.lastAccessed);
+		const sortedTabs = activeTabs.sort((x, z) => z.lastAccessed - x.lastAccessed);
 		const url = sortedTabs[0]?.url;
-		if (url) {
-			const u = new URL(url);
-			return `*://${u.host}/*`;
-		}
-		return '';
+		if (!url) return '';
+		const u = new URL(url);
+		return `*://${u.host}/*`;
 	} catch {
 		return '';
 	}
@@ -32,9 +28,8 @@ const getCurrentTabAsync = async () => {
 };
 
 const getAllRulesAsync = async (): Promise<Rule[]> => {
-	const rules = await storage.get<Rule[]>('rules');
-	console.log(rules.rules || []);
-	return rules.rules || [];
+	const { rules } = await storage.get<Rule[]>('rules');
+	return rules || [];
 };
 
 const upsertRuleAsync = async (rule: Rule) => {
@@ -76,7 +71,7 @@ const disableRuleAsync = async (id: number) => {
 const enableRuleRuleAsync = async (id: number) => {
 	const existingRules = await getAllRulesAsync();
 	const rule = existingRules.find(r => r.id === id);
-	if (!rule) return;
+	if (!rule) return existingRules;
 	await netRequest.updateDynamicRules({
 		addRules: [toDynamicRule(rule)],
 	});
@@ -89,12 +84,16 @@ const toggleRuleAsync = async (id: number) => {
 	const existingRules = await getAllRulesAsync();
 	const rule = existingRules.find(r => r.id === id);
 	if (!rule) return existingRules;
-	await (rule.enabled ? disableRuleAsync(id) : enableRuleRuleAsync(id));
+	await netRequest.updateDynamicRules({
+		addRules: rule.enabled ? undefined : [toDynamicRule(rule)],
+		removeRuleIds: rule.enabled ? [id] : undefined,
+	});
 	rule.enabled = !rule.enabled;
+	await storage.set({ rules: existingRules });
 	return existingRules;
 };
 
-//@ts-ignore
+//@ts-expect-error
 const getCurrentRulesAsync = async (): Promise<chrome.declarativeNetRequest.Rule[]> => {
 	return await netRequest.getDynamicRules();
 };
@@ -109,7 +108,6 @@ const clearAllRulesAsync = async () => {
 
 export {
 	getCurrentTabAsync,
-	getCurrentRulesAsync,
 	clearAllRulesAsync,
 	getAllRulesAsync,
 	upsertRuleAsync,

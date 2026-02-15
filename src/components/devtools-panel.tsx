@@ -1,5 +1,5 @@
 import { TopBar } from './top-bar';
-import { sampleProfiles } from './data';
+import { sampleProfiles } from '../data/data';
 import { useCallback, useEffect, useState } from 'react';
 import { Rule } from './../types';
 import { RuleCard } from './rule-card';

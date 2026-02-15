@@ -1,4 +1,4 @@
-import type { Rule, Profile } from './../types';
+import type { Rule, Profile } from '../types';
 
 export const sampleProfiles: Profile[] = [
 	{ id: '1', name: 'Local Dev' },
