@@ -28,7 +28,7 @@ const getCurrentTabAsync = async () => {
 };
 
 const getAllRulesAsync = async (): Promise<Rule[]> => {
-	const { rules } = await storage.get<Rule[]>('rules');
+	const { rules } = await storage.get<Rule[]>();
 	return rules || [];
 };
 
@@ -40,7 +40,7 @@ const upsertRuleAsync = async (rule: Rule) => {
 	await storage.set({ rules: newRules });
 
 	await netRequest.updateDynamicRules({
-		addRules: [toDynamicRule(rule)],
+		addRules: !oldRule || oldRule.enabled ? [toDynamicRule(rule)] : undefined,
 		removeRuleIds: oldRule ? [oldRule.id] : undefined,
 	});
 	return newRules;
