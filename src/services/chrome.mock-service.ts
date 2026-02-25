@@ -4,9 +4,9 @@ import { sampleProfiles, sampleRules } from '../data/data.ts';
 
 // prettier-ignore
 if (!globalThis.chrome
-	|| !globalThis.tabs
-	|| !globalThis.storage
-	|| !globalThis.declarativeNetRequest
+	|| !globalThis.chrome.tabs
+	|| !globalThis.chrome.storage
+	|| !globalThis.chrome.declarativeNetRequest
 ) {
 
 	let currentRules = sampleRules;
@@ -14,11 +14,11 @@ if (!globalThis.chrome
 	if(!globalThis.chrome)
 		 globalThis.chrome = {};
 
-	chrome.tabs = {};
-	chrome.declarativeNetRequest = {
+	globalThis.chrome.tabs = {};
+	globalThis.chrome.declarativeNetRequest = {
 		updateDynamicRules: (...params) => console.log(params)
 	};
-	chrome.storage = {
+	globalThis.chrome.storage = {
 		local: {
 			get: async key => {
 				if (key === 'rules') return { rules: currentRules };
