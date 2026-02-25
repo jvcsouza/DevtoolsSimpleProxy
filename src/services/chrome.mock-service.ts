@@ -2,31 +2,28 @@
 
 import { sampleProfiles, sampleRules } from '../data/data.ts';
 
-// prettier-ignore
-if (!globalThis.chrome
-	|| !globalThis.chrome.tabs
-	|| !globalThis.chrome.storage
-	|| !globalThis.chrome.declarativeNetRequest
+if (
+	!globalThis.chrome ||
+	!globalThis.chrome.tabs ||
+	!globalThis.chrome.storage ||
+	!globalThis.chrome.declarativeNetRequest
 ) {
+	let currentRules = { rules: sampleRules };
+	let dynamicRules = [...sampleRules.filter(x => x.enabled).map(x => x.id)];
 
-	let currentRules = sampleRules;
-
-	if(!globalThis.chrome)
-		 globalThis.chrome = {};
+	if (!globalThis.chrome) globalThis.chrome = {};
 
 	globalThis.chrome.tabs = {};
 	globalThis.chrome.declarativeNetRequest = {
-		updateDynamicRules: (...params) => console.log(params)
+		updateDynamicRules: async ({ addRules, removeRuleIds }) => {
+			if (removeRuleIds) dynamicRules = dynamicRules.filter(x => !removeRuleIds.includes(x));
+			if (addRules) dynamicRules.push(...addRules.map(x => x.id));
+		},
 	};
 	globalThis.chrome.storage = {
 		local: {
-			get: async key => {
-				if (key === 'rules') return { rules: currentRules };
-				return {};
-			},
-			set: async ({ rules }) => {
-				currentRules = rules;
-			},
+			get: async () => structuredClone(currentRules),
+			set: async data => (currentRules = data),
 		},
 	};
 }
