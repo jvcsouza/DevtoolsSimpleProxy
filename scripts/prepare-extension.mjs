@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'path';
 
 (() => {
-	const outDir = 'dist';
-	const extDir = 'extension';
+	const outDir = 'extension';
+	const extDir = 'dist';
 	const execPath = path.dirname(fileURLToPath(import.meta.url));
 
 	const fromDir = path.resolve(execPath, '..', outDir);
