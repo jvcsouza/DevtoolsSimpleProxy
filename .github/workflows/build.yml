@@ -1,0 +1,24 @@
+name: Build & Deploy Extensionn
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm ci
+      - run: npm run build
+      - run: npm run deploy
+      - uses: thedoctor0/zip-release@0.7.5
+        with: 
+          type: 'zip'
+          filename: 'dist.zip'
+          directory: 'dist'
+      - uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: dist.zip
+          extension-id: ${{ secrets.EXTENSION_ID }}
+          client-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          refresh-token: ${{ secrets.REFRESH_TOKEN }}
