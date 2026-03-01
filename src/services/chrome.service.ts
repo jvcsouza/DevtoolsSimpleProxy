@@ -106,6 +106,15 @@ const clearAllRulesAsync = async () => {
 	return [];
 };
 
+const importRulesAsync = async (rules: Rule[]) => {
+	await clearAllRulesAsync();
+	await netRequest.updateDynamicRules({
+		addRules: rules.filter(x => x.enabled).map(rule => toDynamicRule(rule)),
+	});
+	await storage.set({ rules });
+	return rules;
+};
+
 export {
 	getCurrentTabAsync,
 	clearAllRulesAsync,
@@ -116,4 +125,5 @@ export {
 	enableRuleRuleAsync,
 	toggleRuleAsync,
 	suggestUrlFilterAsync,
+	importRulesAsync,
 };

@@ -9,9 +9,18 @@ interface TopBarProps {
 	selectedProfile: string;
 	onProfileChange: (profileId: string) => void;
 	onCreateRule: () => void;
+	onExportRules?: () => void;
+	onImportRules?: () => void;
 }
 
-export function TopBar({ profiles, selectedProfile, onProfileChange, onCreateRule }: TopBarProps) {
+export function TopBar({
+	profiles,
+	selectedProfile,
+	onProfileChange,
+	onCreateRule,
+	onImportRules,
+	onExportRules,
+}: TopBarProps) {
 	return (
 		<header className='flex items-center justify-between border-b px-4 py-2.5'>
 			<div className='flex items-center gap-2'>
@@ -38,7 +47,7 @@ export function TopBar({ profiles, selectedProfile, onProfileChange, onCreateRul
 				<TooltipProvider delayDuration={300}>
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<Button variant='ghost' size='icon' className='h-8 w-8'>
+							<Button onClick={onImportRules} variant='ghost' size='icon' className='h-8 w-8'>
 								<Upload className='h-3.5 w-3.5' />
 								<span className='sr-only'>Import JSON</span>
 							</Button>
@@ -50,7 +59,7 @@ export function TopBar({ profiles, selectedProfile, onProfileChange, onCreateRul
 
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<Button variant='ghost' size='icon' className='h-8 w-8'>
+							<Button onClick={onExportRules} variant='ghost' size='icon' className='h-8 w-8'>
 								<Download className='h-3.5 w-3.5' />
 								<span className='sr-only'>Export JSON</span>
 							</Button>

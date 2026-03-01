@@ -15,6 +15,7 @@ if (
 
 	globalThis.chrome.tabs = {};
 	globalThis.chrome.declarativeNetRequest = {
+		getDynamicRules: async () => dynamicRules,
 		updateDynamicRules: async ({ addRules, removeRuleIds }) => {
 			if (removeRuleIds) dynamicRules = dynamicRules.filter(x => !removeRuleIds.includes(x));
 			if (addRules) dynamicRules.push(...addRules.map(x => x.id));
