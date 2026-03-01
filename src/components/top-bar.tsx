@@ -1,7 +1,7 @@
-import { Profile } from './../types';
-import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from './ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Button } from './ui/button';
+import { Profile } from '@domain/profile';
+import { Select, SelectContent, SelectTrigger, SelectItem, SelectValue } from '@components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@components/ui/tooltip';
+import { Button } from '@components/ui/button';
 import { Download, Plus, Upload } from 'lucide-react';
 
 interface TopBarProps {

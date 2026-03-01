@@ -1,13 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Plus, X, Zap } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Separator } from './ui/separator';
-import type { Rule, HeaderRule, MatchType, ResourceType } from './../types';
-import * as chrome from '../services/chrome.service';
+import { Button } from '@components/ui/button';
+import { Input } from '@components/ui/input';
+import { Label } from '@components/ui/label';
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+} from '@components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
+import { Separator } from '@components/ui/separator';
+import type { Rule, HeaderRule, MatchType, ResourceType } from '@domain/rule';
+import rulesService from '@services/rules.service';
 
 const RESOURCE_TYPES = [
 	{ label: 'CSP Report', value: 'csp_report' },
@@ -56,7 +63,7 @@ export function RuleEditor({ rule, open, onOpenChange, onSave }: RuleEditorProps
 	const [headers, setHeaders] = useState<HeaderRule[]>(rule?.headers ?? [emptyHeader()]);
 
 	useEffect(() => {
-		chrome.suggestUrlFilterAsync().then(suggestion => {
+		rulesService.suggestUrlFilterAsync().then(suggestion => {
 			if (!rule) setUrlFilter(suggestion);
 		});
 	}, [rule]);
