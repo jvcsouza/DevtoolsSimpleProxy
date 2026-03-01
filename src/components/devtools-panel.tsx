@@ -14,6 +14,8 @@ export function DevToolsPanel() {
 	const [editorOpen, setEditorOpen] = useState(false);
 	const [activeCount, setActiveCount] = useState(0);
 
+	console.log('aa');
+
 	useEffect(() => {
 		chrome.getAllRulesAsync().then(setRules);
 	}, []);
