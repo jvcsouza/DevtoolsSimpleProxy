@@ -18,10 +18,6 @@ export function DevToolsPanel() {
 		chrome.getAllRulesAsync().then(setRules);
 	}, []);
 
-	useEffect(() => {
-		setActiveCount(rules.filter(r => r.enabled).length);
-	}, [rules]);
-
 	const handleEditorOpenChange = useCallback((open: boolean) => {
 		setEditorOpen(open);
 		if (open) return;
@@ -31,10 +27,14 @@ export function DevToolsPanel() {
 	const handleCreateRule = useCallback(() => {
 		setEditingRule(null);
 		setEditorOpen(true);
+		setActiveCount(old => old++);
 	}, []);
 
 	const handleToggle = useCallback((id: number) => {
-		chrome.toggleRuleAsync(id).then(setRules);
+		chrome.toggleRuleAsync(id).then(newRules => {
+			setRules(newRules);
+			setActiveCount(newRules.filter(x => x.enabled).length);
+		});
 	}, []);
 
 	const handleEdit = useCallback((rule: Rule) => {
@@ -43,12 +43,16 @@ export function DevToolsPanel() {
 	}, []);
 
 	const handleDelete = useCallback((id: number) => {
-		chrome.deleteRuleAsync(id).then(setRules);
+		chrome.deleteRuleAsync(id).then(newRules => {
+			setRules(newRules);
+			setActiveCount(newRules.filter(x => x.enabled).length);
+		});
 	}, []);
 
 	const handleSave = useCallback((rule: Rule) => {
 		chrome.upsertRuleAsync(rule).then(newRules => {
 			setRules(newRules);
+			setActiveCount(newRules.filter(x => x.enabled).length);
 			setEditingRule(null);
 		});
 	}, []);

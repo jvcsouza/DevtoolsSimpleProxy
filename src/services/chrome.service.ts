@@ -2,7 +2,7 @@ import './chrome.mock-service';
 import { Rule, toDynamicRule } from '../types';
 
 // prettier-ignore
-// @ts-expect-error
+// @ts-expect-error Variavel `chrome` é global nesse contexto
 const { tabs, declarativeNetRequest: netRequest, storage: { local: storage } } = chrome;
 
 const suggestUrlFilterAsync = async () => {
@@ -10,7 +10,7 @@ const suggestUrlFilterAsync = async () => {
 		const activeTabs = await tabs.query({
 			active: true,
 		});
-		//@ts-ignore
+		// @ts-expect-error Não há tipagem para tabs
 		const sortedTabs = activeTabs.sort((x, z) => z.lastAccessed - x.lastAccessed);
 		const url = sortedTabs[0]?.url;
 		if (!url) return '';
@@ -93,7 +93,7 @@ const toggleRuleAsync = async (id: number) => {
 	return existingRules;
 };
 
-//@ts-expect-error
+//@ts-expect-error Tipagem para `declarativeNetRequest.Rule` é global nesse contexto
 const getCurrentRulesAsync = async (): Promise<chrome.declarativeNetRequest.Rule[]> => {
 	return await netRequest.getDynamicRules();
 };
