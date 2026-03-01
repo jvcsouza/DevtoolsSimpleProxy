@@ -1,11 +1,11 @@
-import { TopBar } from './top-bar';
-import { sampleProfiles } from '../data/data';
 import { useCallback, useEffect, useState } from 'react';
-import { Rule } from './../types';
-import { RuleCard } from './rule-card';
-import { StatusBar } from './status-bar';
-import { RuleEditor } from './rule-editor';
-import * as chrome from '../services/chrome.service';
+import { Rule } from '@domain/rule';
+import { sampleProfiles } from '@data/data';
+import { TopBar } from '@components/top-bar';
+import { RuleCard } from '@components/rule-card';
+import { StatusBar } from '@components/status-bar';
+import { RuleEditor } from '@components/rule-editor';
+import rulesService from '@services/rules.service';
 
 export function DevToolsPanel() {
 	const [selectedProfile, setSelectedProfile] = useState(sampleProfiles[0].id);
@@ -15,7 +15,7 @@ export function DevToolsPanel() {
 	const [activeCount, setActiveCount] = useState(0);
 
 	useEffect(() => {
-		chrome.getAllRulesAsync().then(setRules);
+		rulesService.getAllRulesAsync().then(setRules);
 	}, []);
 
 	const handleEditorOpenChange = useCallback((open: boolean) => {
@@ -31,7 +31,7 @@ export function DevToolsPanel() {
 	}, []);
 
 	const handleToggle = useCallback((id: number) => {
-		chrome.toggleRuleAsync(id).then(newRules => {
+		rulesService.toggleRuleAsync(id).then(newRules => {
 			setRules(newRules);
 			setActiveCount(newRules.filter(x => x.enabled).length);
 		});
@@ -43,14 +43,14 @@ export function DevToolsPanel() {
 	}, []);
 
 	const handleDelete = useCallback((id: number) => {
-		chrome.deleteRuleAsync(id).then(newRules => {
+		rulesService.deleteRuleAsync(id).then(newRules => {
 			setRules(newRules);
 			setActiveCount(newRules.filter(x => x.enabled).length);
 		});
 	}, []);
 
 	const handleSave = useCallback((rule: Rule) => {
-		chrome.upsertRuleAsync(rule).then(newRules => {
+		rulesService.upsertRuleAsync(rule).then(newRules => {
 			setRules(newRules);
 			setActiveCount(newRules.filter(x => x.enabled).length);
 			setEditingRule(null);
@@ -70,7 +70,7 @@ export function DevToolsPanel() {
 				const fileReader = new FileReader();
 				fileReader.onload = e => {
 					const content = e.target?.result as string;
-					chrome.importRulesAsync(JSON.parse(content)).then(setRules);
+					rulesService.importRulesAsync(JSON.parse(content)).then(setRules);
 				};
 				fileReader.readAsText(file);
 				element.remove();
@@ -81,7 +81,7 @@ export function DevToolsPanel() {
 	}, []);
 
 	const handleExportRules = useCallback(() => {
-		chrome.getAllRulesAsync().then(rules => {
+		rulesService.getAllRulesAsync().then(rules => {
 			const json = JSON.stringify(rules, null, 4);
 			const fileData = new Blob([json], { type: 'application/json' });
 			const fileUrl = URL.createObjectURL(fileData);

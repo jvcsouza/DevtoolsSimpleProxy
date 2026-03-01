@@ -35,8 +35,24 @@ export type Rule = {
 	headers: HeaderRule[];
 };
 
-//@ts-expect-error Tipagem para `declarativeNetRequest.Rule` é global nesse contexto
-export const toDynamicRule = (rule: Rule): chrome.declarativeNetRequest.Rule => {
+export type RuleConfig = {
+	id: number;
+	priority: number;
+	action: {
+		type: string;
+		requestHeaders: {
+			header: string;
+			value: string;
+			operation: HeaderAction;
+		}[];
+	};
+	condition: {
+		urlFilter: string;
+		resourceTypes: ResourceType[];
+	};
+};
+
+export const toDynamicRule = (rule: Rule): RuleConfig => {
 	return {
 		id: rule.id,
 		priority: 1,
@@ -54,8 +70,3 @@ export const toDynamicRule = (rule: Rule): chrome.declarativeNetRequest.Rule => 
 		},
 	};
 };
-
-export interface Profile {
-	id: string;
-	name: string;
-}

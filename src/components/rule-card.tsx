@@ -1,10 +1,10 @@
-import { cn } from './../lib/utils';
-import { Rule } from '../types';
-import { Switch } from './ui/switch';
-import { Badge } from './ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Button } from './ui/button';
+import { cn } from '@lib/utils';
+import { Rule } from '@domain/rule';
+import { Switch } from '@components/ui/switch';
+import { Badge } from '@components/ui/badge';
+import { Button } from '@components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@components/ui/tooltip';
 
 interface RuleCardProps {
 	rule: Rule;
