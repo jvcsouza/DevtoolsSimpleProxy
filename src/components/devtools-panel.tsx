@@ -57,6 +57,43 @@ export function DevToolsPanel() {
 		});
 	}, []);
 
+	const handleImportRules = useCallback(() => {
+		const element = document.createElement('input');
+		element.setAttribute('type', 'file');
+		element.setAttribute('accept', '.json');
+		element.addEventListener('cancel', () => element.remove(), { once: true });
+		element.addEventListener(
+			'change',
+			evt => {
+				// @ts-expect-error - Não há tipagem para o target do evento de mudança de input file
+				const file = evt.target.files[0];
+				const fileReader = new FileReader();
+				fileReader.onload = e => {
+					const content = e.target?.result as string;
+					chrome.importRulesAsync(JSON.parse(content)).then(setRules);
+				};
+				fileReader.readAsText(file);
+				element.remove();
+			},
+			{ once: true },
+		);
+		element.click();
+	}, []);
+
+	const handleExportRules = useCallback(() => {
+		chrome.getAllRulesAsync().then(rules => {
+			const json = JSON.stringify(rules, null, 4);
+			const fileData = new Blob([json], { type: 'application/json' });
+			const fileUrl = URL.createObjectURL(fileData);
+			const element = document.createElement('a');
+			element.setAttribute('download', 'exported.json');
+			element.setAttribute('href', fileUrl);
+			element.click();
+			element.remove();
+			URL.revokeObjectURL(fileUrl);
+		});
+	}, []);
+
 	return (
 		<div className='flex h-screen w-screen flex-col bg-background'>
 			<TopBar
@@ -64,6 +101,8 @@ export function DevToolsPanel() {
 				selectedProfile={selectedProfile}
 				onProfileChange={setSelectedProfile}
 				onCreateRule={handleCreateRule}
+				onExportRules={handleExportRules}
+				onImportRules={handleImportRules}
 			></TopBar>
 
 			<main className='flex-1 overflow-y-auto p-3'>
