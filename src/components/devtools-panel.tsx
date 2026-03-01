@@ -65,7 +65,7 @@ export function DevToolsPanel() {
 		element.addEventListener(
 			'change',
 			evt => {
-				// @ts-ignore
+				// @ts-expect-error - Não há tipagem para o target do evento de mudança de input file
 				const file = evt.target.files[0];
 				const fileReader = new FileReader();
 				fileReader.onload = e => {
