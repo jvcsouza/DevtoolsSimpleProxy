@@ -1,0 +1,23 @@
+name: Build & Deploy Extension
+
+on: [workflow_dispatch]
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - name: Instalando dependências
+              run: npm ci
+            - name: Rodando comando de deploy
+              run: npm run deploy
+            - name: Compactando extensão
+              run: zip -r dist.zip ./dist
+            - name: Realizando upload da extensão
+              uses: mnao305/chrome-extension-upload@v5.0.0
+              with:
+                  file-path: dist.zip
+                  extension-id: ${{ secrets.EXTENSION_ID }}
+                  client-id: ${{ secrets.CLIENT_ID }}
+                  client-secret: ${{ secrets.CLIENT_SECRET }}
+                  refresh-token: ${{ secrets.REFRESH_TOKEN }}

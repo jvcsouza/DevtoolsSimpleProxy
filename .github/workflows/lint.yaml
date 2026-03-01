@@ -3,11 +3,11 @@ name: Build
 on: [pull_request]
 
 jobs:
-    build:
+    lint:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v5
             - name: Instalando dependências
               run: npm ci
-            - name: Rodando comando de build
-              run: npm run build
+            - name: Checando ESLint
+              run: npm run lint
