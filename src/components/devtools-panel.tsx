@@ -15,7 +15,10 @@ export function DevToolsPanel() {
 	const [activeCount, setActiveCount] = useState(0);
 
 	useEffect(() => {
-		rulesService.getAllRulesAsync().then(setRules);
+		rulesService.getAllRulesAsync().then(newRules => {
+			setRules(newRules);
+			setActiveCount(newRules.filter(x => x.enabled).length);
+		});
 	}, []);
 
 	const handleEditorOpenChange = useCallback((open: boolean) => {

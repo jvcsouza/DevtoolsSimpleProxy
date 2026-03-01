@@ -1,11 +1,6 @@
 import { RuntimePort } from '@/core/ports/runtime.port';
 import { sampleRules } from '@data/data';
-import { RuleConfig, toDynamicRule } from '@domain/rule';
-
-interface dynamicRuleParam {
-	addRules?: RuleConfig[];
-	removeRuleIds?: number[];
-}
+import { toDynamicRule } from '@domain/rule';
 
 export function createLocalRuntimeAdapter(): RuntimePort {
 	let currentRules = { rules: sampleRules };
@@ -17,7 +12,7 @@ export function createLocalRuntimeAdapter(): RuntimePort {
 		},
 		netRequest: {
 			getDynamicRules: async () => dynamicRules,
-			updateDynamicRules: async ({ addRules, removeRuleIds }: dynamicRuleParam) => {
+			updateDynamicRules: async ({ addRules, removeRuleIds }) => {
 				if (removeRuleIds) dynamicRules = dynamicRules.filter(x => !removeRuleIds.includes(x.id));
 				if (addRules) dynamicRules.push(...addRules);
 			},
