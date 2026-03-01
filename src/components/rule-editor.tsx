@@ -59,7 +59,7 @@ export function RuleEditor({ rule, open, onOpenChange, onSave }: RuleEditorProps
 		chrome.suggestUrlFilterAsync().then(suggestion => {
 			if (!rule) setUrlFilter(suggestion);
 		});
-	}, []);
+	}, [rule]);
 
 	const addHeader = useCallback(() => {
 		setHeaders(prev => [...prev, emptyHeader()]);

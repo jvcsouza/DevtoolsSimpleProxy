@@ -1,6 +1,4 @@
-// @ts-nocheck
-
-import { sampleProfiles, sampleRules } from '../data/data.ts';
+import { sampleRules } from '../data/data.ts';
 
 if (
 	!globalThis.chrome ||
