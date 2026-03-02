@@ -26,6 +26,7 @@ export interface HeaderRule {
 
 export type Rule = {
 	id: number;
+	profileId: string;
 	name: string;
 	description: string;
 	enabled: boolean;
@@ -52,7 +53,7 @@ export type RuleConfig = {
 	};
 };
 
-export const toDynamicRule = (rule: Rule): RuleConfig => {
+export const toRuleConfig = (rule: Rule): RuleConfig => {
 	return {
 		id: rule.id,
 		priority: 1,

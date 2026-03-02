@@ -1,25 +1,36 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Rule } from '@domain/rule';
-import { sampleProfiles } from '@data/data';
 import { TopBar } from '@components/top-bar';
 import { RuleCard } from '@components/rule-card';
 import { StatusBar } from '@components/status-bar';
 import { RuleEditor } from '@components/rule-editor';
 import rulesService from '@services/rules.service';
+import panelService from '@/core/services/panel.service';
+import profileService from '@/core/services/profile.service';
+import { Profile } from '@/core/domain/profile';
 
 export function DevToolsPanel() {
-	const [selectedProfile, setSelectedProfile] = useState(sampleProfiles[0].id);
+	const [selectedProfile, setSelectedProfile] = useState('');
 	const [rules, setRules] = useState<Rule[]>([]);
 	const [editingRule, setEditingRule] = useState<Rule | null>(null);
 	const [editorOpen, setEditorOpen] = useState(false);
 	const [activeCount, setActiveCount] = useState(0);
+	const [profiles, setProfiles] = useState<Profile[]>([]);
 
 	useEffect(() => {
-		rulesService.getAllRulesAsync().then(newRules => {
-			setRules(newRules);
-			setActiveCount(newRules.filter(x => x.enabled).length);
+		profileService.getAllProfilesAsync().then(profiles => {
+			setSelectedProfile(profiles[0].id);
+			setProfiles(profiles);
 		});
 	}, []);
+
+	useEffect(() => {
+		rulesService.applyRulesByProfileIdAsync(selectedProfile).then(newRules => {
+			const profileRules = newRules.filter(r => r.profileId === selectedProfile);
+			setRules(profileRules);
+			setActiveCount(profileRules.filter(x => x.enabled).length);
+		});
+	}, [selectedProfile]);
 
 	const handleEditorOpenChange = useCallback((open: boolean) => {
 		setEditorOpen(open);
@@ -33,34 +44,37 @@ export function DevToolsPanel() {
 		setActiveCount(old => old++);
 	}, []);
 
-	const handleToggle = useCallback((id: number) => {
+	const handleToggle = (id: number) => {
 		rulesService.toggleRuleAsync(id).then(newRules => {
-			setRules(newRules);
-			setActiveCount(newRules.filter(x => x.enabled).length);
+			const profileRules = newRules.filter(r => r.profileId === selectedProfile);
+			setRules(profileRules);
+			setActiveCount(profileRules.filter(x => x.enabled).length);
 		});
-	}, []);
+	};
 
 	const handleEdit = useCallback((rule: Rule) => {
 		setEditingRule(rule);
 		setEditorOpen(true);
 	}, []);
 
-	const handleDelete = useCallback((id: number) => {
+	const handleDelete = (id: number) => {
 		rulesService.deleteRuleAsync(id).then(newRules => {
-			setRules(newRules);
-			setActiveCount(newRules.filter(x => x.enabled).length);
+			const profileRules = newRules.filter(r => r.profileId === selectedProfile);
+			setRules(profileRules);
+			setActiveCount(profileRules.filter(x => x.enabled).length);
 		});
-	}, []);
+	};
 
-	const handleSave = useCallback((rule: Rule) => {
+	const handleSave = (rule: Rule) => {
 		rulesService.upsertRuleAsync(rule).then(newRules => {
-			setRules(newRules);
-			setActiveCount(newRules.filter(x => x.enabled).length);
+			const profileRules = newRules.filter(r => r.profileId === selectedProfile);
+			setRules(profileRules);
+			setActiveCount(profileRules.filter(x => x.enabled).length);
 			setEditingRule(null);
 		});
-	}, []);
+	};
 
-	const handleImportRules = useCallback(() => {
+	const handleImportRules = () => {
 		const element = document.createElement('input');
 		element.setAttribute('type', 'file');
 		element.setAttribute('accept', '.json');
@@ -70,37 +84,42 @@ export function DevToolsPanel() {
 			evt => {
 				// @ts-expect-error - Não há tipagem para o target do evento de mudança de input file
 				const file = evt.target.files[0];
-				const fileReader = new FileReader();
-				fileReader.onload = e => {
-					const content = e.target?.result as string;
-					rulesService.importRulesAsync(JSON.parse(content)).then(setRules);
-				};
-				fileReader.readAsText(file);
-				element.remove();
+				panelService
+					.importPanelDataAsync(file)
+					.then(() => profileService.getAllProfilesAsync())
+					.then(newProfiles => {
+						if (newProfiles.find(p => p.id === selectedProfile)) {
+							return rulesService.getRulesByProfileIdAsync(selectedProfile);
+						}
+						setSelectedProfile(newProfiles[0]?.id ?? '');
+						return Promise.resolve([]);
+					})
+					.then(newRules => {
+						setRules(newRules);
+						setActiveCount(newRules.filter(x => x.enabled).length);
+						element.remove();
+					});
 			},
 			{ once: true },
 		);
 		element.click();
-	}, []);
+	};
 
 	const handleExportRules = useCallback(() => {
-		rulesService.getAllRulesAsync().then(rules => {
-			const json = JSON.stringify(rules, null, 4);
-			const fileData = new Blob([json], { type: 'application/json' });
-			const fileUrl = URL.createObjectURL(fileData);
+		panelService.exportPanelDataAsync().then(url => {
 			const element = document.createElement('a');
 			element.setAttribute('download', 'exported.json');
-			element.setAttribute('href', fileUrl);
+			element.setAttribute('href', url);
 			element.click();
 			element.remove();
-			URL.revokeObjectURL(fileUrl);
+			URL.revokeObjectURL(url);
 		});
 	}, []);
 
 	return (
 		<div className='flex h-screen w-screen flex-col bg-background'>
 			<TopBar
-				profiles={sampleProfiles}
+				profiles={profiles}
 				selectedProfile={selectedProfile}
 				onProfileChange={setSelectedProfile}
 				onCreateRule={handleCreateRule}
@@ -135,6 +154,7 @@ export function DevToolsPanel() {
 
 			<RuleEditor
 				key={`${editorOpen}-${editingRule?.id ?? 'new'}`}
+				profileId={selectedProfile}
 				open={editorOpen}
 				onOpenChange={handleEditorOpenChange}
 				rule={editingRule}

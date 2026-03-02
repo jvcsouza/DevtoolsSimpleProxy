@@ -47,12 +47,13 @@ const emptyHeader: () => HeaderRule = () => ({
 
 interface RuleEditorProps {
 	open: boolean;
-	onOpenChange: (open: boolean) => void;
 	rule: Rule | null;
+	profileId?: string;
+	onOpenChange: (open: boolean) => void;
 	onSave: (rule: Rule) => void;
 }
 
-export function RuleEditor({ rule, open, onOpenChange, onSave }: RuleEditorProps) {
+export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: RuleEditorProps) {
 	const isEditing = !!rule;
 
 	const [name, setName] = useState(rule?.name ?? '');
@@ -114,8 +115,15 @@ export function RuleEditor({ rule, open, onOpenChange, onSave }: RuleEditorProps
 	}, []);
 
 	const handleSave = () => {
+		if (!profileId) {
+			// Should never happen, but just in case
+			alert('Profile ID is missing. Please select a profile before creating rules.');
+			return;
+		}
+
 		const savedRule: Rule = {
 			id: rule?.id ?? generateId(),
+			profileId: profileId,
 			name: name || 'Untitled Rule',
 			description,
 			enabled: rule?.enabled ?? true,

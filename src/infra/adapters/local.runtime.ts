@@ -1,11 +1,11 @@
-import { RuntimePort } from '@/core/ports/runtime.port';
-import { sampleRules } from '@data/data';
-import { toDynamicRule } from '@domain/rule';
+import { RuntimePort, StorageShape } from '@/core/ports/runtime.port';
+import { sampleProfiles, sampleRules } from '@data/data';
+import { toRuleConfig } from '@domain/rule';
+
+let currentRules: StorageShape = { profiles: sampleProfiles, rules: sampleRules };
+let dynamicRules = [...sampleRules.filter(x => x.enabled).map(x => toRuleConfig(x))];
 
 export function createLocalRuntimeAdapter(): RuntimePort {
-	let currentRules = { rules: sampleRules };
-	let dynamicRules = [...sampleRules.filter(x => x.enabled).map(x => toDynamicRule(x))];
-
 	return {
 		tabs: {
 			query: () => Promise.resolve([]),
@@ -18,9 +18,11 @@ export function createLocalRuntimeAdapter(): RuntimePort {
 			},
 		},
 		storage: {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			set: async (data: any) => (currentRules = data),
-			get: async () => structuredClone(currentRules),
+			set: async (data: Partial<StorageShape>) => {
+				currentRules = { ...currentRules, ...data };
+			},
+			get: async <K extends keyof StorageShape>(key?: K) =>
+				structuredClone(key ? currentRules[key] : currentRules),
 		},
 	};
 }

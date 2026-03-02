@@ -1,7 +1,7 @@
 /// <reference types="chrome" />
 
 import { RuleConfig } from '@/core/domain/rule';
-import { RuntimePort, TabsResultPort } from '@/core/ports/runtime.port';
+import { RuntimePort, StorageShape, TabsResultPort } from '@/core/ports/runtime.port';
 
 export function createChromeRuntimeAdapter(): RuntimePort {
 	const { tabs, declarativeNetRequest: netRequest, storage } = chrome;
@@ -19,9 +19,11 @@ export function createChromeRuntimeAdapter(): RuntimePort {
 			},
 		},
 		storage: {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			set: (data: any) => storage.local.set(data),
-			get: () => storage.local.get(),
+			set: async (data: Partial<StorageShape>) => storage.local.set(data),
+			get: async <K extends keyof StorageShape>(key?: K) => {
+				const data = await storage.local.get(key ? [key as string] : undefined);
+				return key ? (data[key] as StorageShape[K]) : (data as StorageShape);
+			},
 		},
 	};
 }
