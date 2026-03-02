@@ -1,15 +1,25 @@
-import type { Rule } from '@domain/rule';
+import { Rule } from '@/core/domain/rule';
 import type { Profile } from '@domain/profile';
 
 export const sampleProfiles: Profile[] = [
-	{ id: '1', name: 'Local Dev' },
-	{ id: '2', name: 'Homolog' },
-	{ id: '3', name: 'Mock API' },
+	{
+		id: '1',
+		name: 'Local Dev',
+	},
+	{
+		id: '2',
+		name: 'Homolog',
+	},
+	{
+		id: '3',
+		name: 'Mock API',
+	},
 ];
 
 export const sampleRules: Rule[] = [
 	{
 		id: 1,
+		profileId: '1',
 		name: 'Add Auth Token',
 		description: 'Injects Bearer token for local development API calls',
 		enabled: true,
@@ -26,7 +36,26 @@ export const sampleRules: Rule[] = [
 		],
 	},
 	{
+		id: 4,
+		profileId: '2',
+		name: 'API Key Injection',
+		description: 'Adds X-API-Key header to all API Gateway requests',
+		enabled: false,
+		matchType: 'regex',
+		urlFilter: '^https://gateway\\.example\\.com/v[0-9]+/.*',
+		resourceTypes: ['xmlhttprequest'],
+		headers: [
+			{
+				id: 5,
+				name: 'X-API-Key',
+				value: 'sk-test-key-xyz789',
+				action: 'append',
+			},
+		],
+	},
+	{
 		id: 2,
+		profileId: '2',
 		name: 'Disable Caching',
 		description: 'Forces no-cache for all script resources during debugging',
 		enabled: true,
@@ -50,6 +79,7 @@ export const sampleRules: Rule[] = [
 	},
 	{
 		id: 3,
+		profileId: '3',
 		name: 'Mock CORS Origin',
 		description: 'Overrides Origin header to bypass CORS restrictions in staging',
 		enabled: false,
@@ -62,23 +92,6 @@ export const sampleRules: Rule[] = [
 				name: 'Origin',
 				value: 'https://app.example.com',
 				action: 'set',
-			},
-		],
-	},
-	{
-		id: 4,
-		name: 'API Key Injection',
-		description: 'Adds X-API-Key header to all API Gateway requests',
-		enabled: false,
-		matchType: 'regex',
-		urlFilter: '^https://gateway\\.example\\.com/v[0-9]+/.*',
-		resourceTypes: ['xmlhttprequest'],
-		headers: [
-			{
-				id: 5,
-				name: 'X-API-Key',
-				value: 'sk-test-key-xyz789',
-				action: 'append',
 			},
 		],
 	},

@@ -1,6 +1,6 @@
 import { createRuntime } from '@/infra/adapters/runtime.factory';
 import { RuntimePort } from '../ports/runtime.port';
-import { Rule, toDynamicRule } from '@domain/rule';
+import { Rule, toRuleConfig } from '@domain/rule';
 
 const createRulesService = (runtime: RuntimePort) => {
 	const suggestUrlFilterAsync = async () => {
@@ -25,7 +25,7 @@ const createRulesService = (runtime: RuntimePort) => {
 	};
 
 	const getAllRulesAsync = async (): Promise<Rule[]> => {
-		const { rules } = await runtime.storage.get();
+		const rules = await runtime.storage.get('rules');
 		return rules || [];
 	};
 
@@ -33,11 +33,9 @@ const createRulesService = (runtime: RuntimePort) => {
 		const existingRules = await getAllRulesAsync();
 		const oldRule = existingRules.find(r => r.id === rule.id);
 		const newRules = oldRule ? existingRules.map(r => (r.id === rule.id ? rule : r)) : [...existingRules, rule];
-
 		await runtime.storage.set({ rules: newRules });
-
 		await runtime.netRequest.updateDynamicRules({
-			addRules: !oldRule || oldRule.enabled ? [toDynamicRule(rule)] : undefined,
+			addRules: !oldRule || oldRule.enabled ? [toRuleConfig(rule)] : undefined,
 			removeRuleIds: oldRule ? [oldRule.id] : undefined,
 		});
 		return newRules;
@@ -70,7 +68,7 @@ const createRulesService = (runtime: RuntimePort) => {
 		const rule = existingRules.find(r => r.id === id);
 		if (!rule) return existingRules;
 		await runtime.netRequest.updateDynamicRules({
-			addRules: [toDynamicRule(rule)],
+			addRules: [toRuleConfig(rule)],
 		});
 		rule.enabled = true;
 		await runtime.storage.set({ rules: existingRules });
@@ -81,11 +79,11 @@ const createRulesService = (runtime: RuntimePort) => {
 		const existingRules = await getAllRulesAsync();
 		const rule = existingRules.find(r => r.id === id);
 		if (!rule) return existingRules;
-		await runtime.netRequest.updateDynamicRules({
-			addRules: rule.enabled ? undefined : [toDynamicRule(rule)],
-			removeRuleIds: rule.enabled ? [id] : undefined,
-		});
 		rule.enabled = !rule.enabled;
+		await runtime.netRequest.updateDynamicRules({
+			addRules: rule.enabled ? [toRuleConfig(rule)] : undefined,
+			removeRuleIds: rule.enabled ? undefined : [id],
+		});
 		await runtime.storage.set({ rules: existingRules });
 		return existingRules;
 	};
@@ -94,7 +92,7 @@ const createRulesService = (runtime: RuntimePort) => {
 		return await runtime.netRequest.getDynamicRules();
 	};
 
-	const clearAllRulesAsync = async () => {
+	const clearAppliedRulesAsync = async () => {
 		const allRules = await getCurrentRulesAsync();
 		await runtime.netRequest.updateDynamicRules({
 			removeRuleIds: allRules.map(r => r.id),
@@ -103,17 +101,31 @@ const createRulesService = (runtime: RuntimePort) => {
 	};
 
 	const importRulesAsync = async (rules: Rule[]) => {
-		await clearAllRulesAsync();
+		await clearAppliedRulesAsync();
 		await runtime.netRequest.updateDynamicRules({
-			addRules: rules.filter(x => x.enabled).map(rule => toDynamicRule(rule)),
+			addRules: rules.filter(x => x.enabled).map(toRuleConfig),
 		});
 		await runtime.storage.set({ rules });
 		return rules;
 	};
 
+	const getRulesByProfileIdAsync = async (profileId: string) => {
+		const existingRules = await getAllRulesAsync();
+		return existingRules.filter(r => r.profileId === profileId);
+	};
+
+	const applyRulesByProfileIdAsync = async (profileId: string) => {
+		clearAppliedRulesAsync();
+		const rules = await getRulesByProfileIdAsync(profileId);
+		await runtime.netRequest.updateDynamicRules({
+			addRules: rules.filter(x => x.enabled).map(toRuleConfig),
+		});
+		return rules;
+	};
+
 	return {
 		getCurrentTabAsync,
-		clearAllRulesAsync,
+		clearAppliedRulesAsync,
 		getAllRulesAsync,
 		upsertRuleAsync,
 		deleteRuleAsync,
@@ -122,6 +134,8 @@ const createRulesService = (runtime: RuntimePort) => {
 		toggleRuleAsync,
 		suggestUrlFilterAsync,
 		importRulesAsync,
+		getRulesByProfileIdAsync,
+		applyRulesByProfileIdAsync,
 	};
 };
 
