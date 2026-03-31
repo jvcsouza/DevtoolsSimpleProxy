@@ -1,8 +1,10 @@
 import { createRuntime } from '@/infra/adapters/runtime.factory';
-import { StorageShapeSchema } from '@domain/schemas';
+import { createZodStorageValidator } from '@/infra/adapters/zod.validator';
 import { RuntimePort } from '../ports/runtime.port';
+import { ValidatorPort } from '../ports/validator.port';
+import { StorageShape } from '../ports/runtime.port';
 
-const createPanelService = (runtime: RuntimePort) => {
+const createPanelService = (runtime: RuntimePort, validator: ValidatorPort<StorageShape>) => {
 	const exportPanelDataAsync = async () => {
 		const data = await runtime.storage.get();
 		const blob = new Blob([JSON.stringify(data, null, 4)], { type: 'application/json' });
@@ -20,12 +22,9 @@ const createPanelService = (runtime: RuntimePort) => {
 			throw new Error('O arquivo selecionado não é um JSON válido.');
 		}
 
-		const result = StorageShapeSchema.safeParse(parsed);
+		const result = validator.validate(parsed);
 		if (!result.success) {
-			const messages = result.error.issues
-				.map(issue => `${issue.path.join('.')}: ${issue.message}`)
-				.join('\n');
-			throw new Error(`Arquivo inválido. Problemas encontrados:\n${messages}`);
+			throw new Error(`Arquivo inválido. Problemas encontrados:\n${result.errors.join('\n')}`);
 		}
 
 		await runtime.storage.set(result.data);
@@ -37,4 +36,4 @@ const createPanelService = (runtime: RuntimePort) => {
 	};
 };
 
-export default createPanelService(createRuntime());
+export default createPanelService(createRuntime(), createZodStorageValidator());
