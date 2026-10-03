@@ -39,10 +39,15 @@ export function RuleCard({ rule, onToggle, onEdit, onDelete }: RuleCardProps) {
 			<div className='flex shrink-0 items-center gap-1.5'>
 				{rule.kind === 'mock' && rule.mock && (
 					<Badge
-						variant={rule.mock.status >= 400 ? 'destructive' : 'default'}
+						variant={
+							(rule.mock.mode !== 'transform' || rule.mock.overrideStatus) && rule.mock.status >= 400
+								? 'destructive'
+								: 'default'
+						}
 						className='font-mono text-[10px] font-normal'
 					>
-						MOCK {rule.mock.status}
+						{rule.mock.mode === 'transform' ? 'TRANSFORM' : 'MOCK'}
+						{(rule.mock.mode !== 'transform' || rule.mock.overrideStatus) && ` ${rule.mock.status}`}
 						{rule.mock.delayMs > 0 && ` · ${rule.mock.delayMs}ms`}
 					</Badge>
 				)}

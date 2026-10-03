@@ -1,4 +1,4 @@
-import { Rule } from '@/core/domain/rule';
+import { defaultMockResponse, Rule } from '@/core/domain/rule';
 import type { Profile } from '@domain/profile';
 
 export const sampleProfiles: Profile[] = [
@@ -111,6 +111,7 @@ export const sampleRules: Rule[] = [
 		resourceTypes: ['xmlhttprequest'],
 		headers: [],
 		mock: {
+			...defaultMockResponse(),
 			status: 200,
 			contentType: 'application/json',
 			body: '{\n\t"id": 1,\n\t"name": "Jane Doe"\n}',
@@ -130,11 +131,33 @@ export const sampleRules: Rule[] = [
 		resourceTypes: ['xmlhttprequest'],
 		headers: [],
 		mock: {
+			...defaultMockResponse(),
 			status: 500,
 			contentType: 'application/json',
 			body: '{\n\t"error": "Internal Server Error"\n}',
 			delayMs: 0,
 			headers: [],
+		},
+	},
+	{
+		id: 7,
+		profileId: '3',
+		kind: 'mock',
+		name: 'Upgrade User Plan',
+		description: 'Keeps the real response but forces premium plan and paid status',
+		enabled: false,
+		matchType: 'contains',
+		urlFilter: '/api/me',
+		resourceTypes: ['xmlhttprequest'],
+		headers: [],
+		mock: {
+			...defaultMockResponse(),
+			mode: 'transform',
+			jsonOps: [
+				{ id: 7, op: 'set', path: 'data.user.plan', value: '"premium"' },
+				{ id: 8, op: 'remove', path: 'data.token', value: '' },
+			],
+			textOps: [{ id: 9, find: '"status":"\\w+"', replace: '"status":"PAID"', regex: true }],
 		},
 	},
 ];

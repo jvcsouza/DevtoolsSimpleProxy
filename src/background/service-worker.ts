@@ -9,6 +9,7 @@ import {
 	type MockResponse,
 	type Rule,
 } from '@domain/rule';
+import { applyResponseTransform } from '@domain/response-transform';
 import { MOCK_ENGINE_PORT_NAME, PanelToWorkerMessage, WorkerToPanelMessage } from './mock-engine.protocol';
 
 const DEBUGGER_PROTOCOL_VERSION = '1.3';
@@ -26,7 +27,13 @@ type RequestPausedParams = {
 	requestId: string;
 	resourceType: string;
 	request: { url: string; method: string; headers: Record<string, string> };
+	/** Presentes apenas quando a request está pausada no estágio Response. */
+	responseStatusCode?: number;
+	responseErrorReason?: string;
+	responseHeaders?: HeaderEntry[];
 };
+
+type RequestStage = 'Request' | 'Response';
 
 type HeaderEntry = { name: string; value: string };
 
@@ -63,6 +70,9 @@ const detachAsync = async (tabId: number) => {
 	}
 };
 
+// `replace` responde sem ir ao servidor; `transform` precisa da resposta original.
+const getStage = (rule: Rule): RequestStage => (rule.mock?.mode === 'transform' ? 'Response' : 'Request');
+
 const reconcileAsync = async (tabId: number) => {
 	const session = sessions.get(tabId);
 	if (!session) return;
@@ -80,15 +90,25 @@ const reconcileAsync = async (tabId: number) => {
 			await chrome.debugger.attach({ tabId }, DEBUGGER_PROTOCOL_VERSION);
 			session.attached = true;
 		}
-		const urlPatterns = [...new Set(session.mocks.map(toCdpUrlPattern))];
-		await sendCommand(tabId, 'Fetch.enable', {
-			patterns: urlPatterns.map(urlPattern => ({ urlPattern, requestStage: 'Request' })),
-		});
+		const patterns = new Map(
+			session.mocks.map(rule => {
+				const pattern = { urlPattern: toCdpUrlPattern(rule), requestStage: getStage(rule) };
+				return [`${pattern.requestStage}|${pattern.urlPattern}`, pattern];
+			}),
+		);
+		await sendCommand(tabId, 'Fetch.enable', { patterns: [...patterns.values()] });
 		postStatus(tabId);
 	} catch (error) {
 		await detachAsync(tabId);
 		postStatus(tabId, error instanceof Error ? error.message : String(error));
 	}
+};
+
+const fromBase64 = (base64: string) => {
+	const binary = atob(base64);
+	const bytes = new Uint8Array(binary.length);
+	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+	return new TextDecoder().decode(bytes);
 };
 
 const toBase64 = (text: string) => {
@@ -153,14 +173,67 @@ const fulfillAsync = async (tabId: number, params: RequestPausedParams, mock: Mo
 	});
 };
 
+const TEXT_CONTENT_TYPE = /^text\/|json|xml|javascript|ecmascript|x-www-form-urlencoded/i;
+
+const findHeader = (headers: HeaderEntry[], name: string) =>
+	headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value;
+
+const canTransform = (params: RequestPausedParams) => {
+	const status = params.responseStatusCode ?? 0;
+	if (params.responseErrorReason || params.request.method === 'OPTIONS') return false;
+	if (status >= 300 && status < 400) return false;
+	const contentType = findHeader(params.responseHeaders ?? [], 'Content-Type') ?? '';
+	return !contentType || TEXT_CONTENT_TYPE.test(contentType);
+};
+
+const transformAsync = async (tabId: number, params: RequestPausedParams, mock: MockResponse) => {
+	const { body, base64Encoded } = (await sendCommand(tabId, 'Fetch.getResponseBody', {
+		requestId: params.requestId,
+	})) as { body: string; base64Encoded: boolean };
+
+	const originalHeaders = params.responseHeaders ?? [];
+	const result = applyResponseTransform(
+		{
+			body: base64Encoded ? fromBase64(body) : body,
+			contentType: findHeader(originalHeaders, 'Content-Type') ?? '',
+		},
+		mock,
+	);
+	if (result.errors.length) console.warn('[mock-engine]', params.request.url, result.errors);
+
+	const userHeaders = mock.headers.filter(h => h.name.trim()).map(({ name, value }) => ({ name, value }));
+	// O body entregue já está decodificado e com outro tamanho
+	const droppedHeaders = ['content-length', 'content-encoding', ...userHeaders.map(h => h.name.toLowerCase())];
+
+	if (mock.delayMs > 0) await new Promise(resolve => setTimeout(resolve, mock.delayMs));
+
+	await sendCommand(tabId, 'Fetch.fulfillRequest', {
+		requestId: params.requestId,
+		responseCode: mock.overrideStatus ? mock.status : params.responseStatusCode,
+		responseHeaders: [...originalHeaders.filter(h => !droppedHeaders.includes(h.name.toLowerCase())), ...userHeaders],
+		body: toBase64(result.body),
+	});
+};
+
 const handleRequestPausedAsync = async (tabId: number, params: RequestPausedParams) => {
+	const stage: RequestStage =
+		params.responseStatusCode !== undefined || params.responseErrorReason !== undefined ? 'Response' : 'Request';
 	const rule = sessions
 		.get(tabId)
-		?.mocks.find(r => matchesUrl(r, params.request.url) && matchesCdpResourceType(r, params.resourceType));
+		?.mocks.find(
+			r =>
+				getStage(r) === stage &&
+				matchesUrl(r, params.request.url) &&
+				matchesCdpResourceType(r, params.resourceType),
+		);
 
 	try {
-		if (rule?.mock) {
+		if (rule?.mock && stage === 'Request') {
 			await fulfillAsync(tabId, params, rule.mock);
+			return;
+		}
+		if (rule?.mock && stage === 'Response' && canTransform(params)) {
+			await transformAsync(tabId, params, rule.mock);
 			return;
 		}
 	} catch (error) {

@@ -150,7 +150,9 @@ export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: Rule
 					<DialogTitle className='text-base'>{isEditing ? 'Edit Rule' : 'Create Rule'}</DialogTitle>
 					<DialogDescription className='text-xs'>
 						{kind === 'mock'
-							? 'Return a mocked response (status, headers, body and delay) for matching requests.'
+							? mock.mode === 'transform'
+								? 'Change parts of the real response (JSON fields, text, status, headers) for matching requests.'
+								: 'Return a mocked response (status, headers, body and delay) for matching requests.'
 							: 'Configure header interception for matching requests.'}
 					</DialogDescription>
 				</DialogHeader>

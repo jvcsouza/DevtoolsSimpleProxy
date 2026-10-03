@@ -31,12 +31,35 @@ export interface MockHeader {
 	value: string;
 }
 
+export type MockMode = 'replace' | 'transform';
+
+export interface JsonOperation {
+	id: number;
+	op: 'set' | 'remove';
+	path: string;
+	value: string;
+}
+
+export interface TextOperation {
+	id: number;
+	find: string;
+	replace: string;
+	regex: boolean;
+}
+
 export interface MockResponse {
+	/** `replace`: responde sem ir ao servidor. `transform`: altera a resposta original. */
+	mode: MockMode;
 	status: number;
+	/** Só no modo `transform`: quando false mantém o status original. */
+	overrideStatus: boolean;
 	contentType: string;
 	body: string;
 	delayMs: number;
 	headers: MockHeader[];
+	jsonOps: JsonOperation[];
+	textOps: TextOperation[];
+	textTemplate: string;
 }
 
 export type Rule = {
@@ -72,11 +95,16 @@ export type RuleConfig = {
 };
 
 export const defaultMockResponse = (): MockResponse => ({
+	mode: 'replace',
 	status: 200,
+	overrideStatus: false,
 	contentType: 'application/json',
 	body: '{\n\t"message": "mocked"\n}',
 	delayMs: 0,
 	headers: [],
+	jsonOps: [],
+	textOps: [],
+	textTemplate: '',
 });
 
 /** Regras salvas antes da existência do `kind` são tratadas como regras de headers. */
