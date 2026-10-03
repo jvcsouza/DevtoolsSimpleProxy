@@ -30,8 +30,20 @@ export interface NetRequestPort {
 	getDynamicRules(): Promise<RuleConfig[]>;
 }
 
+export interface MockEngineStatus {
+	attached: boolean;
+	error?: string;
+}
+
+export interface MockEnginePort {
+	/** Sincroniza o engine de mock (chrome.debugger) da aba inspecionada com as regras do profile. */
+	sync(profileId: string): Promise<void>;
+	onStatusChange(listener: (status: MockEngineStatus) => void): () => void;
+}
+
 export interface RuntimePort {
 	tabs: TabsPort;
 	storage: StoragePort;
 	netRequest: NetRequestPort;
+	mockEngine: MockEnginePort;
 }

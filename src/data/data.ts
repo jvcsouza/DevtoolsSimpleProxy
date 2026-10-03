@@ -20,6 +20,7 @@ export const sampleRules: Rule[] = [
 	{
 		id: 1,
 		profileId: '1',
+		kind: 'headers',
 		name: 'Add Auth Token',
 		description: 'Injects Bearer token for local development API calls',
 		enabled: true,
@@ -29,7 +30,7 @@ export const sampleRules: Rule[] = [
 		headers: [
 			{
 				id: 1,
-				name: 'Authorization',
+		name: 'Authorization',
 				value: 'Bearer dev-token-abc123',
 				action: 'append',
 			},
@@ -38,6 +39,7 @@ export const sampleRules: Rule[] = [
 	{
 		id: 4,
 		profileId: '2',
+		kind: 'headers',
 		name: 'API Key Injection',
 		description: 'Adds X-API-Key header to all API Gateway requests',
 		enabled: false,
@@ -47,7 +49,7 @@ export const sampleRules: Rule[] = [
 		headers: [
 			{
 				id: 5,
-				name: 'X-API-Key',
+		name: 'X-API-Key',
 				value: 'sk-test-key-xyz789',
 				action: 'append',
 			},
@@ -56,6 +58,7 @@ export const sampleRules: Rule[] = [
 	{
 		id: 2,
 		profileId: '2',
+		kind: 'headers',
 		name: 'Disable Caching',
 		description: 'Forces no-cache for all script resources during debugging',
 		enabled: true,
@@ -65,13 +68,13 @@ export const sampleRules: Rule[] = [
 		headers: [
 			{
 				id: 2,
-				name: 'Cache-Control',
+		name: 'Cache-Control',
 				value: 'no-cache, no-store',
 				action: 'set',
 			},
 			{
 				id: 3,
-				name: 'Pragma',
+		name: 'Pragma',
 				value: 'no-cache',
 				action: 'append',
 			},
@@ -80,6 +83,7 @@ export const sampleRules: Rule[] = [
 	{
 		id: 3,
 		profileId: '3',
+		kind: 'headers',
 		name: 'Mock CORS Origin',
 		description: 'Overrides Origin header to bypass CORS restrictions in staging',
 		enabled: false,
@@ -89,10 +93,48 @@ export const sampleRules: Rule[] = [
 		headers: [
 			{
 				id: 4,
-				name: 'Origin',
+		name: 'Origin',
 				value: 'https://app.example.com',
 				action: 'set',
 			},
 		],
+	},
+	{
+		id: 5,
+		profileId: '3',
+		kind: 'mock',
+		name: 'Mock User Endpoint',
+		description: 'Returns a fake user payload with a 1s delay',
+		enabled: true,
+		matchType: 'contains',
+		urlFilter: '/api/users/*',
+		resourceTypes: ['xmlhttprequest'],
+		headers: [],
+		mock: {
+			status: 200,
+			contentType: 'application/json',
+			body: '{\n\t"id": 1,\n\t"name": "Jane Doe"\n}',
+			delayMs: 1000,
+			headers: [{ id: 6, name: 'X-Mocked-By', value: 'DevTools Simple Proxy' }],
+		},
+	},
+	{
+		id: 6,
+		profileId: '3',
+		kind: 'mock',
+		name: 'Force Checkout Error',
+		description: 'Simulates a 500 on checkout',
+		enabled: false,
+		matchType: 'startsWith',
+		urlFilter: 'https://staging-api.example.com/checkout',
+		resourceTypes: ['xmlhttprequest'],
+		headers: [],
+		mock: {
+			status: 500,
+			contentType: 'application/json',
+			body: '{\n\t"error": "Internal Server Error"\n}',
+			delayMs: 0,
+			headers: [],
+		},
 	},
 ];

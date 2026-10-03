@@ -13,7 +13,10 @@ import {
 } from '@components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@components/ui/select';
 import { Separator } from '@components/ui/separator';
-import type { Rule, HeaderRule, MatchType, ResourceType } from '@domain/rule';
+import { cn } from '@lib/utils';
+import { defaultMockResponse } from '@domain/rule';
+import type { Rule, HeaderRule, MatchType, MockResponse, ResourceType, RuleKind } from '@domain/rule';
+import { MockResponseEditor } from '@components/mock-response-editor';
 import rulesService from '@services/rules.service';
 
 const RESOURCE_TYPES = [
@@ -61,7 +64,9 @@ export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: Rule
 	const [matchType, setMatchType] = useState<MatchType>(rule?.matchType ?? 'contains');
 	const [urlFilter, setUrlFilter] = useState(rule?.urlFilter ?? '');
 	const [resourceType, setResourceType] = useState<ResourceType>(rule?.resourceTypes[0] ?? 'script');
-	const [headers, setHeaders] = useState<HeaderRule[]>(rule?.headers ?? [emptyHeader()]);
+	const [headers, setHeaders] = useState<HeaderRule[]>(rule?.headers?.length ? rule.headers : [emptyHeader()]);
+	const [kind, setKind] = useState<RuleKind>(rule?.kind ?? 'headers');
+	const [mock, setMock] = useState<MockResponse>(rule?.mock ?? defaultMockResponse());
 
 	useEffect(() => {
 		rulesService.suggestUrlFilterAsync().then(suggestion => {
@@ -124,13 +129,15 @@ export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: Rule
 		const savedRule: Rule = {
 			id: rule?.id ?? generateId(),
 			profileId: profileId,
+			kind,
 			name: name || 'Untitled Rule',
 			description,
 			enabled: rule?.enabled ?? true,
 			matchType,
 			urlFilter,
 			resourceTypes: [resourceType],
-			headers: headers.filter(h => h.name.trim() !== ''),
+			headers: kind === 'headers' ? headers.filter(h => h.name.trim() !== '') : [],
+			mock: kind === 'mock' ? { ...mock, headers: mock.headers.filter(h => h.name.trim() !== '') } : undefined,
 		};
 		onSave(savedRule);
 		onOpenChange(false);
@@ -142,11 +149,41 @@ export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: Rule
 				<DialogHeader>
 					<DialogTitle className='text-base'>{isEditing ? 'Edit Rule' : 'Create Rule'}</DialogTitle>
 					<DialogDescription className='text-xs'>
-						Configure header interception for matching requests.
+						{kind === 'mock'
+							? 'Return a mocked response (status, headers, body and delay) for matching requests.'
+							: 'Configure header interception for matching requests.'}
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className='flex flex-col gap-4'>
+					<div className='flex flex-col gap-1.5'>
+						<Label className='text-xs font-medium'>Rule type</Label>
+						<div className='grid grid-cols-2 gap-2'>
+							<Button
+								variant={kind === 'headers' ? 'default' : 'outline'}
+								size='sm'
+								className={cn('h-8 text-xs', kind !== 'headers' && 'bg-transparent')}
+								onClick={() => setKind('headers')}
+							>
+								Modify request headers
+							</Button>
+							<Button
+								variant={kind === 'mock' ? 'default' : 'outline'}
+								size='sm'
+								className={cn('h-8 text-xs', kind !== 'mock' && 'bg-transparent')}
+								onClick={() => setKind('mock')}
+							>
+								Mock response
+							</Button>
+						</div>
+						{kind === 'mock' && (
+							<p className='text-[11px] text-muted-foreground'>
+								Mocks use the chrome.debugger API: Chrome shows a "started debugging this browser" banner
+								while a mock rule is active.
+							</p>
+						)}
+					</div>
+
 					<div className='grid grid-cols-2 gap-3'>
 						<div className='flex flex-col gap-1.5'>
 							<Label htmlFor='rule-name' className='text-xs font-medium'>
@@ -231,106 +268,112 @@ export function RuleEditor({ profileId, rule, open, onOpenChange, onSave }: Rule
 
 					<Separator />
 
-					<div className='flex flex-col gap-2'>
-						<div className='flex items-center justify-between'>
-							<Label className='text-xs font-medium'>Headers</Label>
-							<Button variant='ghost' size='sm' className='h-7 gap-1 text-xs' onClick={addHeader}>
-								<Plus className='h-3 w-3' />
-								Add header
-							</Button>
-						</div>
-
-						<div className='flex flex-col gap-2'>
-							{headers.map(header => (
-								<div key={header.id} className='flex items-center gap-2'>
-									<Input
-										value={header.name}
-										onChange={e => updateHeader(header.id, 'name', e.target.value)}
-										placeholder='Header name'
-										className='h-8 flex-1 font-mono text-xs'
-									/>
-									<Input
-										value={header.value}
-										onChange={e => updateHeader(header.id, 'value', e.target.value)}
-										placeholder='Header value'
-										className='h-8 flex-1 font-mono text-xs'
-									/>
-									<Select
-										value={header.action}
-										onValueChange={v => updateHeader(header.id, 'action', v)}
-									>
-										<SelectTrigger className='h-8 w-28 text-xs'>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value='append' className='text-xs'>
-												Append
-											</SelectItem>
-											<SelectItem value='set' className='text-xs'>
-												Add/Modify
-											</SelectItem>
-											<SelectItem value='remove' className='text-xs'>
-												Remove
-											</SelectItem>
-										</SelectContent>
-									</Select>
-									<Button
-										variant='ghost'
-										size='icon'
-										className='h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive'
-										onClick={() => removeHeader(header.id)}
-										disabled={headers.length === 1}
-									>
-										<X className='h-3.5 w-3.5' />
-										<span className='sr-only'>Remove header</span>
+					{kind === 'mock' ? (
+						<MockResponseEditor value={mock} onChange={setMock} />
+					) : (
+						<>
+							<div className='flex flex-col gap-2'>
+								<div className='flex items-center justify-between'>
+									<Label className='text-xs font-medium'>Headers</Label>
+									<Button variant='ghost' size='sm' className='h-7 gap-1 text-xs' onClick={addHeader}>
+										<Plus className='h-3 w-3' />
+										Add header
 									</Button>
 								</div>
-							))}
-						</div>
-					</div>
 
-					<Separator />
+								<div className='flex flex-col gap-2'>
+									{headers.map(header => (
+										<div key={header.id} className='flex items-center gap-2'>
+											<Input
+												value={header.name}
+												onChange={e => updateHeader(header.id, 'name', e.target.value)}
+												placeholder='Header name'
+												className='h-8 flex-1 font-mono text-xs'
+											/>
+											<Input
+												value={header.value}
+												onChange={e => updateHeader(header.id, 'value', e.target.value)}
+												placeholder='Header value'
+												className='h-8 flex-1 font-mono text-xs'
+											/>
+											<Select
+												value={header.action}
+												onValueChange={v => updateHeader(header.id, 'action', v)}
+											>
+												<SelectTrigger className='h-8 w-28 text-xs'>
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value='append' className='text-xs'>
+														Append
+													</SelectItem>
+													<SelectItem value='set' className='text-xs'>
+														Add/Modify
+													</SelectItem>
+													<SelectItem value='remove' className='text-xs'>
+														Remove
+													</SelectItem>
+												</SelectContent>
+											</Select>
+											<Button
+												variant='ghost'
+												size='icon'
+												className='h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive'
+												onClick={() => removeHeader(header.id)}
+												disabled={headers.length === 1}
+											>
+												<X className='h-3.5 w-3.5' />
+												<span className='sr-only'>Remove header</span>
+											</Button>
+										</div>
+									))}
+								</div>
+							</div>
 
-					<div className='flex flex-col gap-2'>
-						<div className='flex items-center gap-1.5'>
-							<Zap className='h-3 w-3 text-muted-foreground' />
-							<Label className='text-xs font-medium text-muted-foreground'>Quick Templates</Label>
-						</div>
-						<div className='flex flex-wrap gap-1.5'>
-							<Button
-								variant='outline'
-								size='sm'
-								className='h-7 text-[11px] bg-transparent'
-								onClick={() => applyTemplate('bearer')}
-							>
-								Add Authorization Bearer
-							</Button>
-							<Button
-								variant='outline'
-								size='sm'
-								className='h-7 text-[11px] bg-transparent'
-								onClick={() => applyTemplate('apikey')}
-							>
-								Add X-API-Key
-							</Button>
-							<Button
-								variant='outline'
-								size='sm'
-								className='h-7 text-[11px] bg-transparent'
-								onClick={() => applyTemplate('nocache')}
-							>
-								Disable Cache
-							</Button>
-							<Button
-								variant='outline'
-								size='sm'
-								className='h-7 text-[11px] bg-transparent'
-								onClick={() => applyTemplate('origin')}
-							>
-								Fake Origin
-							</Button>
-						</div>
-					</div>
+							<Separator />
+
+							<div className='flex flex-col gap-2'>
+								<div className='flex items-center gap-1.5'>
+									<Zap className='h-3 w-3 text-muted-foreground' />
+									<Label className='text-xs font-medium text-muted-foreground'>Quick Templates</Label>
+								</div>
+								<div className='flex flex-wrap gap-1.5'>
+									<Button
+										variant='outline'
+										size='sm'
+										className='h-7 text-[11px] bg-transparent'
+										onClick={() => applyTemplate('bearer')}
+									>
+										Add Authorization Bearer
+									</Button>
+									<Button
+										variant='outline'
+										size='sm'
+										className='h-7 text-[11px] bg-transparent'
+										onClick={() => applyTemplate('apikey')}
+									>
+										Add X-API-Key
+									</Button>
+									<Button
+										variant='outline'
+										size='sm'
+										className='h-7 text-[11px] bg-transparent'
+										onClick={() => applyTemplate('nocache')}
+									>
+										Disable Cache
+									</Button>
+									<Button
+										variant='outline'
+										size='sm'
+										className='h-7 text-[11px] bg-transparent'
+										onClick={() => applyTemplate('origin')}
+									>
+										Fake Origin
+									</Button>
+								</div>
+							</div>
+						</>
+					)}
 				</div>
 
 				<DialogFooter className='gap-2 sm:gap-0'>

@@ -2,11 +2,12 @@
 	"manifest_version": 3,
 	"name": "DevTools Interceptor (v2)",
 	"version": "2.0.0",
-	"description": "Aba no DevTools para criar regras que modificam headers via declarativeNetRequest.",
-	"permissions": ["declarativeNetRequest", "storage", "tabs"],
+	"description": "Aba no DevTools para criar regras que modificam headers (declarativeNetRequest) e mockam respostas (chrome.debugger).",
+	"permissions": ["declarativeNetRequest", "storage", "tabs", "debugger"],
 	"host_permissions": ["<all_urls>"],
 	"background": {
-		"service_worker": "service_worker.js"
+		"service_worker": "service_worker.js",
+		"type": "module"
 	},
 	"devtools_page": "startup.html",
 	"action": {

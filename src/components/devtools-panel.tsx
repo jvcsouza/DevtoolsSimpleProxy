@@ -8,6 +8,7 @@ import rulesService from '@services/rules.service';
 import panelService from '@/core/services/panel.service';
 import profileService from '@/core/services/profile.service';
 import { Profile } from '@/core/domain/profile';
+import { MockEngineStatus } from '@/core/ports/runtime.port';
 
 export function DevToolsPanel() {
 	const [selectedProfile, setSelectedProfile] = useState('');
@@ -16,6 +17,9 @@ export function DevToolsPanel() {
 	const [editorOpen, setEditorOpen] = useState(false);
 	const [activeCount, setActiveCount] = useState(0);
 	const [profiles, setProfiles] = useState<Profile[]>([]);
+	const [mockEngine, setMockEngine] = useState<MockEngineStatus>({ attached: false });
+
+	useEffect(() => rulesService.onMockEngineStatusChange(setMockEngine), []);
 
 	useEffect(() => {
 		profileService.getAllProfilesAsync().then(profiles => {
@@ -89,7 +93,7 @@ export function DevToolsPanel() {
 					.then(() => profileService.getAllProfilesAsync())
 					.then(newProfiles => {
 						if (newProfiles.find(p => p.id === selectedProfile)) {
-							return rulesService.getRulesByProfileIdAsync(selectedProfile);
+							return rulesService.applyRulesByProfileIdAsync(selectedProfile);
 						}
 						setSelectedProfile(newProfiles[0]?.id ?? '');
 						return Promise.resolve([]);
@@ -150,7 +154,7 @@ export function DevToolsPanel() {
 				</div>
 			</main>
 
-			<StatusBar activeCount={activeCount} totalCount={rules.length} />
+			<StatusBar activeCount={activeCount} totalCount={rules.length} mockEngine={mockEngine} />
 
 			<RuleEditor
 				key={`${editorOpen}-${editingRule?.id ?? 'new'}`}

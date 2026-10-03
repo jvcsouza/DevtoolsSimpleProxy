@@ -1,9 +1,9 @@
 import { RuntimePort, StorageShape } from '@/core/ports/runtime.port';
 import { sampleProfiles, sampleRules } from '@data/data';
-import { toRuleConfig } from '@domain/rule';
+import { isHeadersRule, toRuleConfig } from '@domain/rule';
 
 let currentRules: StorageShape = { profiles: sampleProfiles, rules: sampleRules };
-let dynamicRules = [...sampleRules.filter(x => x.enabled).map(x => toRuleConfig(x))];
+let dynamicRules = [...sampleRules.filter(x => x.enabled && isHeadersRule(x)).map(x => toRuleConfig(x))];
 
 export function createLocalRuntimeAdapter(): RuntimePort {
 	return {
@@ -23,6 +23,10 @@ export function createLocalRuntimeAdapter(): RuntimePort {
 			},
 			get: async <K extends keyof StorageShape>(key?: K) =>
 				structuredClone(key ? currentRules[key] : currentRules),
+		},
+		mockEngine: {
+			sync: async () => {},
+			onStatusChange: () => () => {},
 		},
 	};
 }

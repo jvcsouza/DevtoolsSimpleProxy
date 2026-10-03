@@ -1,8 +1,14 @@
 import { createRuntime } from '@/infra/adapters/runtime.factory';
-import { RuntimePort } from '../ports/runtime.port';
-import { Rule, toRuleConfig } from '@domain/rule';
+import { MockEngineStatus, RuntimePort } from '../ports/runtime.port';
+import { isHeadersRule, normalizeRule, Rule, toRuleConfig } from '@domain/rule';
 
 const createRulesService = (runtime: RuntimePort) => {
+	// Só regras de headers vão para o declarativeNetRequest; mocks são aplicados pelo service worker via chrome.debugger.
+	const toNetRequestRules = (rules: Rule[]) => rules.filter(r => r.enabled && isHeadersRule(r)).map(toRuleConfig);
+
+	const syncMockEngineAsync = (profileId: string | undefined) =>
+		profileId ? runtime.mockEngine.sync(profileId) : Promise.resolve();
+
 	const suggestUrlFilterAsync = async () => {
 		try {
 			const activeTabs = await runtime.tabs.query({
@@ -26,7 +32,7 @@ const createRulesService = (runtime: RuntimePort) => {
 
 	const getAllRulesAsync = async (): Promise<Rule[]> => {
 		const rules = await runtime.storage.get('rules');
-		return rules || [];
+		return (rules || []).map(normalizeRule);
 	};
 
 	const upsertRuleAsync = async (rule: Rule) => {
@@ -35,9 +41,10 @@ const createRulesService = (runtime: RuntimePort) => {
 		const newRules = oldRule ? existingRules.map(r => (r.id === rule.id ? rule : r)) : [...existingRules, rule];
 		await runtime.storage.set({ rules: newRules });
 		await runtime.netRequest.updateDynamicRules({
-			addRules: !oldRule || oldRule.enabled ? [toRuleConfig(rule)] : undefined,
+			addRules: toNetRequestRules([rule]),
 			removeRuleIds: oldRule ? [oldRule.id] : undefined,
 		});
+		await syncMockEngineAsync(rule.profileId);
 		return newRules;
 	};
 
@@ -48,6 +55,7 @@ const createRulesService = (runtime: RuntimePort) => {
 			removeRuleIds: [id],
 		});
 		await runtime.storage.set({ rules: newRules });
+		await syncMockEngineAsync(existingRules.find(r => r.id === id)?.profileId);
 		return newRules;
 	};
 
@@ -60,6 +68,7 @@ const createRulesService = (runtime: RuntimePort) => {
 		});
 		rule.enabled = false;
 		await runtime.storage.set({ rules: existingRules });
+		await syncMockEngineAsync(rule.profileId);
 		return existingRules;
 	};
 
@@ -67,11 +76,12 @@ const createRulesService = (runtime: RuntimePort) => {
 		const existingRules = await getAllRulesAsync();
 		const rule = existingRules.find(r => r.id === id);
 		if (!rule) return existingRules;
-		await runtime.netRequest.updateDynamicRules({
-			addRules: [toRuleConfig(rule)],
-		});
 		rule.enabled = true;
+		await runtime.netRequest.updateDynamicRules({
+			addRules: toNetRequestRules([rule]),
+		});
 		await runtime.storage.set({ rules: existingRules });
+		await syncMockEngineAsync(rule.profileId);
 		return existingRules;
 	};
 
@@ -81,10 +91,11 @@ const createRulesService = (runtime: RuntimePort) => {
 		if (!rule) return existingRules;
 		rule.enabled = !rule.enabled;
 		await runtime.netRequest.updateDynamicRules({
-			addRules: rule.enabled ? [toRuleConfig(rule)] : undefined,
+			addRules: rule.enabled ? toNetRequestRules([rule]) : undefined,
 			removeRuleIds: rule.enabled ? undefined : [id],
 		});
 		await runtime.storage.set({ rules: existingRules });
+		await syncMockEngineAsync(rule.profileId);
 		return existingRules;
 	};
 
@@ -103,7 +114,7 @@ const createRulesService = (runtime: RuntimePort) => {
 	const importRulesAsync = async (rules: Rule[]) => {
 		await clearAppliedRulesAsync();
 		await runtime.netRequest.updateDynamicRules({
-			addRules: rules.filter(x => x.enabled).map(toRuleConfig),
+			addRules: toNetRequestRules(rules.map(normalizeRule)),
 		});
 		await runtime.storage.set({ rules });
 		return rules;
@@ -115,15 +126,20 @@ const createRulesService = (runtime: RuntimePort) => {
 	};
 
 	const applyRulesByProfileIdAsync = async (profileId: string) => {
-		clearAppliedRulesAsync();
+		await clearAppliedRulesAsync();
 		const rules = await getRulesByProfileIdAsync(profileId);
 		await runtime.netRequest.updateDynamicRules({
-			addRules: rules.filter(x => x.enabled).map(toRuleConfig),
+			addRules: toNetRequestRules(rules),
 		});
+		await syncMockEngineAsync(profileId);
 		return rules;
 	};
 
+	const onMockEngineStatusChange = (listener: (status: MockEngineStatus) => void) =>
+		runtime.mockEngine.onStatusChange(listener);
+
 	return {
+		onMockEngineStatusChange,
 		getCurrentTabAsync,
 		clearAppliedRulesAsync,
 		getAllRulesAsync,

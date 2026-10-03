@@ -1,9 +1,12 @@
+import type { MockEngineStatus } from '@core/ports/runtime.port';
+
 interface StatusBarProps {
 	activeCount: number;
 	totalCount: number;
+	mockEngine: MockEngineStatus;
 }
 
-export function StatusBar({ activeCount, totalCount }: StatusBarProps) {
+export function StatusBar({ activeCount, totalCount, mockEngine }: StatusBarProps) {
 	return (
 		<footer className='flex items-center justify-between border-t px-4 py-1.5'>
 			<div className='flex items-center gap-3'>
@@ -14,6 +17,17 @@ export function StatusBar({ activeCount, totalCount }: StatusBarProps) {
 					<span className='flex items-center gap-1 text-[11px] text-success'>
 						<span className='inline-block h-1.5 w-1.5 rounded-full bg-success' />
 						Intercepting
+					</span>
+				)}
+				{mockEngine.attached && (
+					<span className='flex items-center gap-1 text-[11px] text-primary'>
+						<span className='inline-block h-1.5 w-1.5 rounded-full bg-primary' />
+						Mocking responses
+					</span>
+				)}
+				{mockEngine.error && (
+					<span className='truncate text-[11px] text-destructive' title={mockEngine.error}>
+						Mock engine: {mockEngine.error}
 					</span>
 				)}
 			</div>

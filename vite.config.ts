@@ -37,6 +37,20 @@ export default defineConfig({
 		],
 	},
 
+	build: {
+		rollupOptions: {
+			input: {
+				main: path.resolve(__dirname, 'index.html'),
+				service_worker: path.resolve(__dirname, 'src/background/service-worker.ts'),
+			},
+			output: {
+				// O manifest.json aponta para `service_worker.js` na raiz do dist
+				entryFileNames: chunk =>
+					chunk.name === 'service_worker' ? 'service_worker.js' : 'assets/[name]-[hash].js',
+			},
+		},
+	},
+
 	plugins: [
 		react({
 			babel: {
